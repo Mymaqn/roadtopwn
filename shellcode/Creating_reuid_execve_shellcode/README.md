@@ -84,4 +84,4 @@ sudo chmod u+s ./test1
 ```
 
 Running the binary we get a shell but only with normal user privileges:
-![alt text](https://github.com/Mymaqn/roadtopwn/tree/main/shellcode/Creating_reuid_execve_shellcode/shellrun1.png)
+![alt text](https://github.com/Mymaqn/roadtopwn/blob/main/shellcode/Creating_reuid_execve_shellcode/shellrun1.png?raw=true)
