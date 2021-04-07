@@ -136,7 +136,7 @@ Assembled char code looks like this:
 
 Running the shellcode tester with the newly generated char code then gives us a root shell:
 
-![shellrun2.png](https://github.com/Mymaqn/roadtopwn/blob/main/shellcode/Creating_reuid_execve_shellcode/shellrun1.png?raw=true)
+![shellrun2.png](https://github.com/Mymaqn/roadtopwn/blob/main/shellcode/Creating_reuid_execve_shellcode/shellrun2.png?raw=true)
 
 Bear in mind that I did not set the group id as it's not needed for the root privileges. But the group id can be set in the same manner as setreuid was, just using setregid instead.
 
