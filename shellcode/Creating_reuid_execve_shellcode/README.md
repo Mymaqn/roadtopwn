@@ -1,4 +1,4 @@
-# Creating a reuid(0,0) execve("/bin/sh") shellcode
+# Creating a setreuid(0,0) execve("/bin/sh") shellcode
 
 # Introduction
 I was sitting the other day, struggling with getting a root shell on a challenge. The concept of the challenge was simple. You got SSH credentials and there was a binary file owned by root, with the SUID bit set.
