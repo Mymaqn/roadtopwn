@@ -19,7 +19,7 @@ The program itself is relatively small and only really consists of two things:
 
 Running checksec yields the following:
 
-![checksec](images/checksec.PNG)
+![checksec](images/checksec.png)
 
 Because of the FULL RELRO we are unable to write to the GOT.
 
@@ -135,7 +135,7 @@ As can be seen on the image above, if we set the flag to be 0xfbad1800 and the _
 But now we have another problem. We are calling exit after all! So how do we make sure that we can actually use this leak before the program closes?
 That's where we're lucky that we have more than one file descriptor and that all file descriptors contain another variable which is a pointer to a vtable that can be found at the end of the file descriptor:
 
-![checksec](images/vtable.png)
+![vtable](images/vtable.png)
 
 The vtable contains pointers to functions that the file descriptor uses to do various tasks, like putting, reading, writing, etc.. Whenever the file descriptor has to do one of these tasks, it looks up the function in the vtable and executes the function at the specified offset.
 
@@ -148,7 +148,7 @@ The general idea lies behind the pointer to the file descriptors being present i
 Since the file descriptors also are located at specified offsets, we can read/write to the low byte of the file descriptor to specify where in the file descriptor we would like to write.
 
 An example of a fake stack created around the file descriptors can be seen here:
-![checksec](images/fakestack_example.png)
+![fakestack](images/fakestack_example.png)
 
 After this it's just a matter of stack pivoting several times to do multiple read calls to the relevant offsets of the file descriptor. The exploit I came up with can be seen below but in case you don't want to read the full exploit here's a quick summary of how it's done:
 
@@ -301,4 +301,4 @@ io.interactive()
 ```
 
 Running this exploit now gives us shell! :D
-![checksec](images/shell.png)
+![shell](images/shell.png)
