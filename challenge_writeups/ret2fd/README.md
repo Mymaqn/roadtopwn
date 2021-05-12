@@ -406,7 +406,9 @@ size_t _IO_new_file_xsputn (FILE *f, const void *data, size_t n)
 }
 libc_hidden_ver (_IO_new_file_xsputn, _IO_file_xsputn)
 ```
-As we can see the function xsputn checks whether _IO_IS_CURRENTLY_PUTTING flag is set along with the _IO_LINE_BUF flag is set. If it's not set it runs the function _IO_OVERFLOW. Let's take a look at what the function _IO_new_file_overflow which is called by _IO_OVERFLOW does does:
+As we can see the function xsputn checks whether _IO_IS_CURRENTLY_PUTTING flag is set along with the _IO_LINE_BUF flag is set. If it's not set it runs the function _IO_OVERFLOW.
+
+Let's take a look at what the function _IO_new_file_overflow which is called by _IO_OVERFLOW does:
 
 ```C
 int _IO_new_file_overflow (FILE *f, int ch)
@@ -468,7 +470,9 @@ int _IO_new_file_overflow (FILE *f, int ch)
 libc_hidden_ver (_IO_new_file_overflow, _IO_file_overflow)
 ```
 
-As we can see it checks whether the _IO_IS_CURRENTLY_PUTTING flag is set. If the flag is set it allocates a buffer from _IO_write_base to _IO_write_ptr and calls do write on that buffer. Let's take a look at _IO_new_do_write which is called by _IO_do_write
+As we can see it checks whether the _IO_IS_CURRENTLY_PUTTING flag is set. If the flag is set it allocates a buffer from _IO_write_base to _IO_write_ptr and calls do write on that buffer.
+
+Let's take a look at _IO_new_do_write which is called by _IO_do_write
 
 
 ```C
@@ -512,8 +516,10 @@ new_do_write (FILE *fp, const char *data, size_t to_do)
 As we can see here as well _IO_new_do_write checks if the _IO_IS_APPENDING flag is set and writes to the console from _IO_write_base to _IO_write_ptr if that is the case.
 
 So what exactly is happening?
-The file descriptor checks it's flags and sees that _IO_IS_APPENDING is set while running through the xsputn function. Since the _IO_IS_APPENDING flag is set and the _IO_LINE_BUF flag is not it calls _IO_OVERFLOW
-_IO_OVERFLOW then fills the buffer from the _IO_write_base to _IO_write_ptr and calls _IO_do_write.
-_IO_new_do_write then checks if the IO_IS_APPENDING flag is set. If it is, it prints out what is in the buffer previously allocated (in this case it was allocated by _IO_OVERFLOW())
+The file descriptor is running through the xsputn function and sees the _IO_IS_APPENDING flag is set but _IO_LINE_BUF is not. Since the _IO_IS_APPENDING flag is set and the _IO_LINE_BUF flag is not it calls _IO_OVERFLOW
 
-Now we have a read :)
+_IO_OVERFLOW then fills the buffer from the _IO_write_base to _IO_write_ptr and calls _IO_do_write on that buffer.
+
+_IO_new_do_write then checks if the IO_IS_APPENDING flag is set. If it is, it prints out what is in that buffer (in this case it was allocated by _IO_OVERFLOW())
+
+Now we have a libc leak :)
