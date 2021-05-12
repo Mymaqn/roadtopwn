@@ -302,3 +302,218 @@ io.interactive()
 
 Running this exploit now gives us shell! :D
 ![shell](images/shell.png)
+
+# The flags
+As mentioned earlier we set the flags to 0xfbad1800, but why exactly these flags? Let's take a look at the flags definition for file descriptors:
+```C
+/* Magic numbers and bits for the _flags field.
+   The magic numbers use the high-order bits of _flags;
+   the remaining bits are available for variable flags.
+   Note: The magic numbers must all be negative if stdio
+   emulation is desired. */
+
+#define _IO_MAGIC 0xFBAD0000 /* Magic number */
+#define _OLD_STDIO_MAGIC 0xFABC0000 /* Emulate old stdio. */
+#define _IO_MAGIC_MASK 0xFFFF0000
+#define _IO_USER_BUF 1 /* User owns buffer; don't delete it on close. */
+#define _IO_UNBUFFERED 2
+#define _IO_NO_READS 4 /* Reading not allowed */
+#define _IO_NO_WRITES 8 /* Writing not allowd */
+#define _IO_EOF_SEEN 0x10
+#define _IO_ERR_SEEN 0x20
+#define _IO_DELETE_DONT_CLOSE 0x40 /* Don't call close(_fileno) on cleanup. */
+#define _IO_LINKED 0x80 /* Set if linked (using _chain) to streambuf::_list_all.*/
+#define _IO_IN_BACKUP 0x100
+#define _IO_LINE_BUF 0x200
+#define _IO_TIED_PUT_GET 0x400 /* Set if put and get pointer logicly tied. */
+#define _IO_CURRENTLY_PUTTING 0x800
+#define _IO_IS_APPENDING 0x1000
+#define _IO_IS_FILEBUF 0x2000
+#define _IO_BAD_SEEN 0x4000
+#define _IO_USER_LOCK 0x8000
+```
+As we can see here the 0xfbad is the magic number for the flags and should always be set.
+0x1000 signify _IO_IS_APPENDING and 0x800 signify _IO_IS_CURRENTLY_PUTTING
+
+Let's take a look at xsputn which is called by puts:
+
+```C
+size_t _IO_new_file_xsputn (FILE *f, const void *data, size_t n)
+{
+  const char *s = (const char *) data;
+  size_t to_do = n;
+  int must_flush = 0;
+  size_t count = 0;
+  if (n <= 0)
+    return 0;
+  /* This is an optimized implementation.
+     If the amount to be written straddles a block boundary
+     (or the filebuf is unbuffered), use sys_write directly. */
+  /* First figure out how much space is available in the buffer. */
+  if ((f->_flags & _IO_LINE_BUF) && (f->_flags & _IO_CURRENTLY_PUTTING))
+    {
+      count = f->_IO_buf_end - f->_IO_write_ptr;
+      if (count >= n)
+        {
+          const char *p;
+          for (p = s + n; p > s; )
+            {
+              if (*--p == '\n')
+                {
+                  count = p - s + 1;
+                  must_flush = 1;
+                  break;
+                }
+            }
+        }
+    }
+  else if (f->_IO_write_end > f->_IO_write_ptr)
+    count = f->_IO_write_end - f->_IO_write_ptr; /* Space available. */
+  /* Then fill the buffer. */
+  if (count > 0)
+    {
+      if (count > to_do)
+        count = to_do;
+      f->_IO_write_ptr = __mempcpy (f->_IO_write_ptr, s, count);
+      s += count;
+      to_do -= count;
+    }
+  if (to_do + must_flush > 0)
+    {
+      size_t block_size, do_write;
+      /* Next flush the (full) buffer. */
+      if (_IO_OVERFLOW (f, EOF) == EOF)
+        /* If nothing else has to be written we must not signal the
+           caller that everything has been written.  */
+        return to_do == 0 ? EOF : n - to_do;
+      /* Try to maintain alignment: write a whole number of blocks.  */
+      block_size = f->_IO_buf_end - f->_IO_buf_base;
+      do_write = to_do - (block_size >= 128 ? to_do % block_size : 0);
+      if (do_write)
+        {
+          count = new_do_write (f, s, do_write);
+          to_do -= count;
+          if (count < do_write)
+            return n - to_do;
+        }
+      /* Now write out the remainder.  Normally, this will fit in the
+         buffer, but it's somewhat messier for line-buffered files,
+         so we let _IO_default_xsputn handle the general case. */
+      if (to_do)
+        to_do -= _IO_default_xsputn (f, s+do_write, to_do);
+    }
+  return n - to_do;
+}
+libc_hidden_ver (_IO_new_file_xsputn, _IO_file_xsputn)
+```
+As we can see the function xsputn checks whether _IO_IS_CURRENTLY_PUTTING flag is set along with the _IO_LINE_BUF flag is set. If it's not set it runs the function _IO_OVERFLOW. Let's take a look at what the function _IO_new_file_overflow which is called by _IO_OVERFLOW does does:
+
+```C
+int _IO_new_file_overflow (FILE *f, int ch)
+{
+  if (f->_flags & _IO_NO_WRITES) /* SET ERROR */
+    {
+      f->_flags |= _IO_ERR_SEEN;
+      __set_errno (EBADF);
+      return EOF;
+    }
+  /* If currently reading or no buffer allocated. */
+  if ((f->_flags & _IO_CURRENTLY_PUTTING) == 0 || f->_IO_write_base == NULL)
+    {
+      /* Allocate a buffer if needed. */
+      if (f->_IO_write_base == NULL)
+        {
+          _IO_doallocbuf (f);
+          _IO_setg (f, f->_IO_buf_base, f->_IO_buf_base, f->_IO_buf_base);
+        }
+      /* Otherwise must be currently reading.
+         If _IO_read_ptr (and hence also _IO_read_end) is at the buffer end,
+         logically slide the buffer forwards one block (by setting the
+         read pointers to all point at the beginning of the block).  This
+         makes room for subsequent output.
+         Otherwise, set the read pointers to _IO_read_end (leaving that
+         alone, so it can continue to correspond to the external position). */
+      if (__glibc_unlikely (_IO_in_backup (f)))
+        {
+          size_t nbackup = f->_IO_read_end - f->_IO_read_ptr;
+          _IO_free_backup_area (f);
+          f->_IO_read_base -= MIN (nbackup,
+                                   f->_IO_read_base - f->_IO_buf_base);
+          f->_IO_read_ptr = f->_IO_read_base;
+        }
+      if (f->_IO_read_ptr == f->_IO_buf_end)
+        f->_IO_read_end = f->_IO_read_ptr = f->_IO_buf_base;
+      f->_IO_write_ptr = f->_IO_read_ptr;
+      f->_IO_write_base = f->_IO_write_ptr;
+      f->_IO_write_end = f->_IO_buf_end;
+      f->_IO_read_base = f->_IO_read_ptr = f->_IO_read_end;
+      f->_flags |= _IO_CURRENTLY_PUTTING;
+      if (f->_mode <= 0 && f->_flags & (_IO_LINE_BUF | _IO_UNBUFFERED))
+        f->_IO_write_end = f->_IO_write_ptr;
+    }
+  if (ch == EOF)
+    return _IO_do_write (f, f->_IO_write_base,
+                         f->_IO_write_ptr - f->_IO_write_base);
+  if (f->_IO_write_ptr == f->_IO_buf_end ) /* Buffer is really full */
+    if (_IO_do_flush (f) == EOF)
+      return EOF;
+  *f->_IO_write_ptr++ = ch;
+  if ((f->_flags & _IO_UNBUFFERED)
+      || ((f->_flags & _IO_LINE_BUF) && ch == '\n'))
+    if (_IO_do_write (f, f->_IO_write_base,
+                      f->_IO_write_ptr - f->_IO_write_base) == EOF)
+      return EOF;
+  return (unsigned char) ch;
+}
+libc_hidden_ver (_IO_new_file_overflow, _IO_file_overflow)
+```
+
+As we can see it checks whether the _IO_IS_CURRENTLY_PUTTING flag is set. If the flag is set it allocates a buffer from _IO_write_base to _IO_write_ptr and calls do write on that buffer. Let's take a look at _IO_new_do_write which is called by _IO_do_write
+
+
+```C
+int _IO_new_do_write (FILE *fp, const char *data, size_t to_do)
+{
+  return (to_do == 0
+          || (size_t) new_do_write (fp, data, to_do) == to_do) ? 0 : EOF;
+}
+libc_hidden_ver (_IO_new_do_write, _IO_do_write)
+
+static size_t
+new_do_write (FILE *fp, const char *data, size_t to_do)
+{
+  size_t count;
+  if (fp->_flags & _IO_IS_APPENDING)
+    /* On a system without a proper O_APPEND implementation,
+       you would need to sys_seek(0, SEEK_END) here, but is
+       not needed nor desirable for Unix- or Posix-like systems.
+       Instead, just indicate that offset (before and after) is
+       unpredictable. */
+    fp->_offset = _IO_pos_BAD;
+  else if (fp->_IO_read_end != fp->_IO_write_base)
+    {
+      off64_t new_pos
+        = _IO_SYSSEEK (fp, fp->_IO_write_base - fp->_IO_read_end, 1);
+      if (new_pos == _IO_pos_BAD)
+        return 0;
+      fp->_offset = new_pos;
+    }
+  count = _IO_SYSWRITE (fp, data, to_do);
+  if (fp->_cur_column && count)
+    fp->_cur_column = _IO_adjust_column (fp->_cur_column - 1, data, count) + 1;
+  _IO_setg (fp, fp->_IO_buf_base, fp->_IO_buf_base, fp->_IO_buf_base);
+  fp->_IO_write_base = fp->_IO_write_ptr = fp->_IO_buf_base;
+  fp->_IO_write_end = (fp->_mode <= 0
+                       && (fp->_flags & (_IO_LINE_BUF | _IO_UNBUFFERED))
+                       ? fp->_IO_buf_base : fp->_IO_buf_end);
+  return count;
+}
+```
+As we can see here as well _IO_new_do_write checks if the _IO_IS_APPENDING flag is set and writes to the console from _IO_write_base to _IO_write_ptr if that is the case.
+
+So what exactly is happening?
+The file descriptor checks it's flags and sees that _IO_IS_APPENDING is set while running through the xsputn function. Since the _IO_IS_APPENDING flag is set and the _IO_LINE_BUF flag is not it calls _IO_OVERFLOW
+_IO_OVERFLOW then fills the buffer from the _IO_write_base to _IO_write_ptr and calls _IO_do_write.
+_IO_new_do_write then checks if the IO_IS_APPENDING flag is set. If it is, it prints out what is in the buffer previously allocated (in this case it was allocated by _IO_OVERFLOW())
+
+Now we have a read :)
