@@ -1,7 +1,7 @@
-# ret2fd/FSOP writeup
+# FSOP writeup
 
 # Introduction
-I was sent a challenge by my friend and teacher zanderdk. He provided me with a binary a linker and a libc file. Both the linker and the libc was version 2.23.
+I was sent a challenge by my friend and teacher [zanderdk](https://twitter.com/alexanderkrog). He provided me with a binary a linker and a libc file. Both the linker and the libc was version 2.23.
 He told me I would likely need to stack pivot several times to solve it and the idea behind the challenge all revolved around messing with file descriptors to a point that calling exit would leak libc!
 It sounded like a great challenge so I asked him to give me a quick introduction to everything which will be covered during this writeup.
 A massive thank you to zander from Kalmarunionen for sending me this amazing challenge! :)
@@ -51,8 +51,8 @@ We also have a ```leave; ret``` gadget which might become useful for stack pivot
 ```
 
 
-# The theory behind ret2fd/FSOP
-The general idea behind ret2fd is abusing the fd structure of stdout and stderr to leak an offset in libc. The structure of a file descriptor can be seen below
+# The theory behind FSOP
+The general idea behind FSOP in this case is abusing the fd structure of stdout and stderr to leak an offset in libc. The structure of a file descriptor can be seen below
 ```C
 struct _IO_FILE {
   int _flags;       /* High-order word is _IO_MAGIC; rest is flags. */
