@@ -9,4 +9,4 @@ General:
 
 Writeups:
 
-[FSOP writeup](https://github.com/Mymaqn/roadtopwn/tree/main/challenge_writeups/ret2fd) (missing explanation of flags)
+[FSOP writeup](https://github.com/Mymaqn/roadtopwn/tree/main/challenge_writeups/FSOP)
