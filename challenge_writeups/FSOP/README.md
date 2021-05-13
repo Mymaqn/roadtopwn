@@ -304,7 +304,7 @@ Running this exploit now gives us shell! :D
 ![shell](images/shell.png)
 
 # The flags
-As mentioned earlier we set the flags to 0xfbad1800, but why exactly these flags? Let's take a look at the flags definition for file descriptors:
+As mentioned earlier we set the flags to 0xfbad1800, but why exactly these flags? Let's take a look at the flags definition for open file pointers:
 ```C
 /* Magic numbers and bits for the _flags field.
    The magic numbers use the high-order bits of _flags;
