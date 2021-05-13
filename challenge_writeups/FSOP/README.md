@@ -2,7 +2,7 @@
 
 # Introduction
 I was sent a challenge by my friend and teacher [zanderdk](https://twitter.com/alexanderkrog). He provided me with a binary a linker and a libc file. Both the linker and the libc was version 2.23.
-He told me I would likely need to stack pivot several times to solve it and the idea behind the challenge all revolved around messing with file pointers to a point that calling exit would leak libc!
+He told me I would likely need to stack pivot several times to solve it and the idea behind the challenge all revolved around messing with the stdout and stdin file pointers to a point that calling exit would leak libc!
 It sounded like a great challenge so I asked him to give me a quick introduction to everything which will be covered during this writeup.
 A massive thank you to zander from Kalmarunionen for sending me this amazing challenge! :)
 
