@@ -2,7 +2,7 @@
 
 # Introduction
 I was sent a challenge by my friend and teacher [zanderdk](https://twitter.com/alexanderkrog). He provided me with a binary a linker and a libc file. Both the linker and the libc was version 2.23.
-He told me I would likely need to stack pivot several times to solve it and the idea behind the challenge all revolved around messing with file descriptors to a point that calling exit would leak libc!
+He told me I would likely need to stack pivot several times to solve it and the idea behind the challenge all revolved around messing with file pointers to a point that calling exit would leak libc!
 It sounded like a great challenge so I asked him to give me a quick introduction to everything which will be covered during this writeup.
 A massive thank you to zander from Kalmarunionen for sending me this amazing challenge! :)
 
@@ -52,7 +52,7 @@ We also have a ```leave; ret``` gadget which might become useful for stack pivot
 
 
 # The theory behind FSOP
-The general idea behind FSOP in this case is abusing the fd structure of stdout and stderr to leak an offset in libc. The structure of a file descriptor can be seen below
+The general idea behind FSOP in this case is abusing the file pointer of stdout and stderr to leak an offset in libc. The structure of a open file pointer can be seen below
 ```C
 struct _IO_FILE {
   int _flags;       /* High-order word is _IO_MAGIC; rest is flags. */
@@ -122,8 +122,8 @@ struct _IO_FILE_complete
 };
 ```
 
-The first value in the file structure is a flag. This flag tells the kernel a variety of information about the file descriptor eg. whether or not it's buffered, is printing, or accessible.
-For now all we need to know is that setting the flag to 0xfbad1800 will allow us to abuse stderr to print out an offset. In short, setting this flag will tell the kernel that stderr is currently printing and when exit then flushes the file descriptor (from highest to lowest) it will print out our data.
+The first value in the file structure is a flag. This flag tells the libc how to handle the open file pointer eg. whether or not it's buffered, is printing, or accessible.
+For now all we need to know is that setting the flag to 0xfbad1800 will allow us to abuse stderr to print out an offset. In short, setting this flag will tell the libc that stderr is currently printing and when exit then flushes the open file pointers (from highest to lowest) it will print out our data.
 If you are interested in how this flag was found, it will be covered in the last part of this post.
 
 The next pointers we are interested in, in this case is the _IO_write_base pointer. If this value is set to something lower than _IO_write and the 0xfbad1800 flag is set, it will print out all values found in between the _IO_write_base and _IO_write pointers.
@@ -133,26 +133,26 @@ An example of this can be tested by setting the flag and the _IO_write_base manu
 As can be seen on the image above, if we set the flag to be 0xfbad1800 and the _IO_write_base pointer to point below _IO_write we will start printing out values between these two pointers.
 
 But now we have another problem. We are calling exit after all! So how do we make sure that we can actually use this leak before the program closes?
-That's where we're lucky that we have more than one file descriptor and that all file descriptors contain another variable which is a pointer to a vtable that can be found at the end of the file descriptor:
+That's where we're lucky that we have more than one file pointer and that all file pointers contain another variable which is a pointer to a vtable that can be found at the end of the file pointer:
 
 ![vtable](images/vtable.png)
 
-The vtable contains pointers to functions that the file descriptor uses to do various tasks, like putting, reading, writing, etc.. Whenever the file descriptor has to do one of these tasks, it looks up the function in the vtable and executes the function at the specified offset.
+The vtable contains pointers to functions that the open file filer pointer uses to do various tasks, like putting, reading, writing, etc.. Whenever the file pointer has to do one of these tasks, it looks up the function in the vtable and executes the function at the specified offset.
 
 We can use this information to create our own fake vtable in the binary which will only contain pointers to main, thereby stopping our exit call and returning to main instead.
 
 Now we'll be executing main again with a libc leak.
 
 # Writing the exploit
-The general idea lies behind the pointer to the file descriptors being present in a read/write-able part of the binary. By first writing to the area by using the ```read``` function we can input gadgets above and below them, then stack pivot there and basically read/write anything into them.
-Since the file descriptors also are located at specified offsets, we can read/write to the low byte of the file descriptor to specify where in the file descriptor we would like to write.
+The general idea lies behind the open file pointers being present in a read/write-able part of the binary. By first writing to the area by using the ```read``` function we can input gadgets above and below them, then stack pivot there and basically read/write anything into them.
+Since the open file pointers also are located at specified offsets, we can read/write to the low byte of the file pointer to specify where in the file pointer structure we would like to write.
 
-An example of a fake stack created around the file descriptors can be seen here:
+An example of a fake stack created around the open file pointers can be seen here:
 ![fakestack](images/fakestack_example.png)
 
-After this it's just a matter of stack pivoting several times to do multiple read calls to the relevant offsets of the file descriptor. The exploit I came up with can be seen below but in case you don't want to read the full exploit here's a quick summary of how it's done:
+After this it's just a matter of stack pivoting several times to do multiple read calls to the relevant offsets of the file pointer structures. The exploit I came up with can be seen below but in case you don't want to read the full exploit here's a quick summary of how it's done:
 
-Stage 1: Overflow, create fake vtable, write flag to stderr, change low byte of stderr to point to write_base, stack pivot to the section with the file descriptor pointers
+Stage 1: Overflow, create fake vtable, write flag to stderr, change low byte of stderr to point to write_base, stack pivot to the section with the open file pointers
 
 Stage 2: Set the low byte of write_base in stderr to 0x0, restore stderr to previous condition, set low byte of stdout to point at vtable pointer, stack pivot back to the top of our fake stack
 
@@ -230,7 +230,7 @@ def create_fake_vtable(offset):
 
 padding = b"AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH"
 
-#Stage 1 Create fake vtable, write flag to stderr, change low byte of stderr to point to write_base, stack pivot to the section with the file descriptor pointers
+#Stage 1 Create fake vtable, write flag to stderr, change low byte of stderr to point to write_base, stack pivot to the section with the open file pointers
 io.send(padding + p64(abovestdout-0x8) + read_where(abovestdout-0x8) + read_where(abovestdin) + read_where(abovestderr) + read_where(fakevtable) + read_where(fullcontrol) + leave)
 
 sleep(0.1)
@@ -516,7 +516,7 @@ new_do_write (FILE *fp, const char *data, size_t to_do)
 As we can see here as well _IO_new_do_write checks if the _IO_IS_APPENDING flag is set and writes to the console from _IO_write_base to _IO_write_ptr if that is the case.
 
 So what exactly is happening?
-The file descriptor is running through the xsputn function and sees the _IO_IS_APPENDING flag is set but _IO_LINE_BUF is not. Since the _IO_IS_APPENDING flag is set and the _IO_LINE_BUF flag is not it calls _IO_OVERFLOW
+The file pointer is running through the xsputn function and sees the _IO_IS_APPENDING flag is set but _IO_LINE_BUF is not. Since the _IO_IS_APPENDING flag is set and the _IO_LINE_BUF flag is not it calls _IO_OVERFLOW
 
 _IO_OVERFLOW then fills the buffer from the _IO_write_base to _IO_write_ptr and calls _IO_do_write on that buffer.
 
