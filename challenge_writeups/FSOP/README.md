@@ -137,7 +137,7 @@ That's where we're lucky that we have more than one file pointer and that all fi
 
 ![vtable](images/vtable.png)
 
-The vtable contains pointers to functions that the open file filer pointer uses to do various tasks, like putting, reading, writing, etc.. Whenever the file pointer has to do one of these tasks, it looks up the function in the vtable and executes the function at the specified offset.
+The vtable contains pointers to functions that the open file filer pointer uses to do various tasks, like putting, reading, writing, etc.. Whenever the file has to do one of these tasks, it looks up the function in the vtable and executes the function at the specified offset.
 
 We can use this information to create our own fake vtable in the binary which will only contain pointers to main, thereby stopping our exit call and returning to main instead.
 
