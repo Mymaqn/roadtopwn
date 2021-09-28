@@ -68,7 +68,7 @@ int main(void)
 ```
 Modifications are:
 
-1) Moving code string inside the main loop to make sure it's on the stack instead of in a section for global variable in the compiled binary
+1) Moving code string inside the main loop to make sure it's on the stack, instead of in a section for global variables in the compiled binary
 
 2) Changing the char code to my own payload
 
