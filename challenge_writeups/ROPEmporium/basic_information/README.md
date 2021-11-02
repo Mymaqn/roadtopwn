@@ -10,6 +10,7 @@ For now all that we need to know is that you can use a disassembler to interpret
 
 Example of the disassembler Cutter on a program's main function:
 ![Cutter](Cutter-Graph-View.png)
+
 This might look severely overwhelming at first but let's break it down
 
 The CPU has registers which it can store and manipulate values from/to.
