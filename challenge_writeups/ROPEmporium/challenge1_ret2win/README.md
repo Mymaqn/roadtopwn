@@ -57,7 +57,7 @@ Keeping track of these:
 * rsp
 * rbp
 
-Whilst everything else are just addressing into the lower bits of these registers. as shown in this little infographic:
+Whilst everything else are just addressing into the lower bits of these registers. As shown in this little infographic:
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━rax━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -66,5 +66,70 @@ Whilst everything else are just addressing into the lower bits of these register
 ┃                               ┃               ┃       ┏━━al━━┫
 0000000000000000000000000000000000000000000000000000000000000000
 ```
+
+### The stack
+The stack is funny in a way, since it counterintuitively grows downwards. This is important to keep in mind as stack buffer overflow ROP would not be possible in the same way if the stack grew upwards.
+
+The stack is just a memory area the process has allocated, at the begining of execution, which contains important values, like our variables, or where to return to after a function call.
+
+rsp and rbp mentioned in the general purpose register section are used to keep track of where in memory the stack is located
+
+rsp points to the current memory address of the stack
+
+rbp is the base pointer and points to the base address of the stackframe, which is a frame of the stack, set up for the function we are currently in
+
+The CPU can use the instructions push and pop to manipulate the stack.
+* Push - Pushes a value onto the stack
+* Pop - Pops a value off the stack
+
+This works by the method of LIFO (Last in first out). Which means that the most recent value pushed onto the stack is also going to be the first value to be popped off the stack.
+
+#### Example:
+
+Stack:
+|StackAddress|Value|rsp|
+|------------|-----|---|
+|0x7fffff00|0x41|<---|
+
+Registers:
+|Register|Value|
+|--------|-----|
+|rax|0x51|
+|rsi|0x61|
+|rdx|0x71|
+
+Execute instruction
+```push rax```
+
+Stack:
+|StackAddress|Value|rsp|
+|------------|-----|---|
+|0x7ffffef8|0x51|<---|
+|0x7fffff00|0x41||
+
+Registers:
+|Register|Value|
+|--------|-----|
+|rax|0x51|
+|rsi|0x61|
+|rdx|0x71|
+
+Execute instruction
+```pop rsi```
+
+Stack:
+|StackAddress|Value|rsp|
+|------------|-----|---|
+|0x7fffff00|0x41|<---|
+
+Registers:
+|Register|Value|
+|--------|-----|
+|rax|0x51|
+|rsi|0x51|
+|rdx|0x71|
+
+
+
 
 
