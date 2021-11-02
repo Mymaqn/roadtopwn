@@ -12,7 +12,7 @@ The goal of the challenges is either:
 1. Spawn a shell through the control flow of the program
 2. Make the program print out the flag.txt file in the same directory
 
-Once one of these 2 goals have been accomplished I will mark the challenge as completed.
+Once one of these 2 goals have been accomplished I will mark the challenge as completed. It should be noted that all binaries assume that you have ASLR enabled.
 
 The goal of these write-ups is for them to be educational and teach ROP from the ground up. Although I do expect anyone reading this has a basic understanding of writing programs in C and some experience using Python.
 
