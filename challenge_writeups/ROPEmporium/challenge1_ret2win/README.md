@@ -96,7 +96,6 @@ Registers:
 |--------|-----|
 |rax|0x51|
 |rsi|0x61|
-|rdx|0x71|
 
 Execute instruction
 ```push rax```
@@ -112,7 +111,6 @@ Registers:
 |--------|-----|
 |rax|0x51|
 |rsi|0x61|
-|rdx|0x71|
 
 Execute instruction
 ```pop rsi```
@@ -127,7 +125,6 @@ Registers:
 |--------|-----|
 |rax|0x51|
 |rsi|0x51|
-|rdx|0x71|
 
 
 
