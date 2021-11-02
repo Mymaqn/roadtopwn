@@ -1,4 +1,4 @@
-# Challenge 1 - Ret2win
+# Basic information to get started
 
 ## The Basics
 Let's first cover some of the need to know information of assembly and how a program works, regarding the stack, before we jump into the exploitation. I promise I'll try to keep this as short as I can, but this should hopefully cover all the information needed to get started.
