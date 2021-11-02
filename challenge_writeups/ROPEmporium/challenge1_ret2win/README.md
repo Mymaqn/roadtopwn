@@ -57,6 +57,14 @@ Keeping track of these:
 * rsp
 * rbp
 
+Whilst everything else are just addressing into the lower bits of these registers. as shown in this little infographic:
 
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━rax━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                               ┏━━━━━━━━━━━━━━eax━━━━━━━━━━━━━┫
+┃                               ┃               ┏━━━━━━ax━━━━━━┫
+┃                               ┃               ┃       ┏━━al━━┫
+0000000000000000000000000000000000000000000000000000000000000000
+```
 
 
