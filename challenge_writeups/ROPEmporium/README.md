@@ -20,9 +20,13 @@ The goal of these write-ups is for them to be educational and teach ROP from the
 If you want to follow along this is the setup I'm using:
 
 Konsole - Terminal Emulator (https://konsole.kde.org/)
+
 Cutter - Disassembler (https://cutter.re/)
+
 pwntools - binary exploitation framework for Python (https://github.com/Gallopsled/pwntools)
+
 pwndbg/gdb - debugger (https://github.com/pwndbg/pwndbg)
+
 ropper - ROP gadget finder (https://github.com/sashs/Ropper)
 
 ## Where to go?
