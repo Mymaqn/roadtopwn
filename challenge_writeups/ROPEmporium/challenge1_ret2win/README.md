@@ -43,6 +43,19 @@ In x86-64, which we are focusing on, there are in total 16 general purpose regis
 |r14|r14d|r14w|r14b|
 |r15|r15d|r15w|r15b
 
+This looks terrifying to remember, but is actually not that hard when it comes down to it as you mostly will be working with the following registers in the following way:
+
+Setting these:
+* rax
+* rbx
+* rcx
+* rdx
+* rsi
+* rdi
+
+Keeping track of these:
+* rsp
+* rbp
 
 
 
