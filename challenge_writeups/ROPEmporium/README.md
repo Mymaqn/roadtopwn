@@ -30,6 +30,8 @@ pwndbg/gdb - debugger (https://github.com/pwndbg/pwndbg)
 ropper - ROP gadget finder (https://github.com/sashs/Ropper)
 
 ## Where to go?
-Click on one of the challenge folders to read the write-up for a challenge. Otherwise use this TOC:
+Click on one of the challenge folders to read the write-up for a challenge. If you are completely new, take a look at basic_information. 
+
+Otherwise use this TOC:
 
 
