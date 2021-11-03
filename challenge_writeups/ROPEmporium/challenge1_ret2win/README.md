@@ -3,11 +3,11 @@
 ## Disassembly
 Let's start by disassembling the binary and start at main:
 
-![main_function](main.png)
+![main_function](images/main.png)
 
 As can be seen it prints some information to the screen using puts and then calls pwnme. Let's take a look at pwnme.
 
-![pwnme_function](pwnme.png)
+![pwnme_function](images/pwnme.png)
 
 In this function we have a buffer overflow. But how can we see that?
 
@@ -123,7 +123,7 @@ io.send(padding)
 
 We can then run and stop right before we return to check what the top stack value is:
 
-![break_before_return](breakbeforereturn.png)
+![break_before_return](images/breakbeforereturn.png)
 
 The value the function is about to return to can be seen in the bottom half of the screen under "STACK". In this case we can see the string ```kaaalaaa```
 
@@ -136,21 +136,21 @@ padding = cyclic(200)[:cyclic_find('kaaalaaa')]
 io.send(padding + b'AAAA')
 ```
 
-![aaaa_return](aaaa_return.png)
+![aaaa_return](images/aaaa_return.png)
 
 As we can see under "STACK" the we will now try to return to the address "AAAA" or 0x41414141, we can now successfully control the return pointer
 
 ### Where do we want to go?
 By looking at the different functions on the left side in Cutter I can see that we have a function called ret2win:
 
-![ret2win_function](ret2infunction.png)
+![ret2win_function](images/ret2infunction.png)
 
 Disassembling it shows us that it calls 
 ```C 
 system("/bin/cat flag.txt");
 ```
 
-![ret2win_disassm](ret2windisassm.png)
+![ret2win_disassm](images/ret2windisassm.png)
 
 So let's copy that address ```0x00400756``` and try to return to that:
 
@@ -162,11 +162,11 @@ io.send(padding+ret2win)
 
 We can now see that we will return to the ret2win function:
 
-![ret2win_success](ret2win_success.png)
+![ret2win_success](images/ret2win_success.png)
 
 Pressing continue now starts loading system and we can see in our interactive shell in the other window that a flag has been printed:
 
-![flag](flag.png)
+![flag](images/flag.png)
 
 Now we just need to see if it works if we replace gdb.debug with process, and we can get the flag without gdb attached!
 
