@@ -52,7 +52,7 @@ The calling convention goes as follows on GNU/Linux:
 |4|RCX|
 |5|R8|
 |6|r9|
-|7..|On the stack|
+|7..xx|On the stack|
 
 We can then look up the corresponding man page for the function and check what the call would be. In this case it is read:
 
