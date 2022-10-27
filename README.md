@@ -10,3 +10,5 @@ General:
 Writeups:
 
 [FSOP writeup](https://github.com/Mymaqn/roadtopwn/tree/main/challenge_writeups/FSOP)
+
+[ROP Emporium writeups](https://github.com/Mymaqn/roadtopwn/tree/main/challenge_writeups/ROPEmporium/)
